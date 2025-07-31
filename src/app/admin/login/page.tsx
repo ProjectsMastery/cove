@@ -17,24 +17,38 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  // src/app/admin/login/page.tsx
+
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    const { success, error } = await login(email, password);
-    if (!success) {
-      toast.error("Login Failed", {
-        description: error || "Invalid credentials or not an admin.",
-      });
-    }
-    // The redirect is handled globally by our useAuth hook's "Traffic Cop".
-    setIsLoading(false);
+
+    // VVV THIS IS THE FIX VVV
+    // We call the login function but we DO NOT await it in a way that
+    // can be cancelled. We use .then() to handle the promise.
+    login(email, password).then(result => {
+      // We only care about the result if it was an ERROR.
+      if (!result.success) {
+        toast.error("Login Failed", {
+          description: result.error || "Invalid credentials or not an admin.",
+        });
+        // It's crucial to turn off the loader on failure.
+        setIsLoading(false);
+      }
+      // On SUCCESS, we do absolutely nothing. The "Traffic Cop" in useAuth
+      // has already started the redirect, and this component is about to disappear.
+      // If we tried to `setIsLoading(false)` here, it would cause a React error.
+    });
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
       <Card className="w-full max-w-sm">
         <form onSubmit={handleLogin}>
-          <CardHeader>
+          <CardHeader className="text-center">
+            <Link href="/" className="font-bold sm:inline-block font-headline text-2xl mb-2">
+                Cove
+            </Link>
             <CardTitle className="text-2xl font-headline">Store Owner Login</CardTitle>
             <CardDescription>Enter your credentials to manage your store.</CardDescription>
           </CardHeader>
@@ -44,7 +58,7 @@ export default function AdminLoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@example.com"
+                placeholder="owner@example.com"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -66,12 +80,13 @@ export default function AdminLoginPage() {
           <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign in
+              Sign In
             </Button>
             <div className="text-center text-sm text-muted-foreground">
-              Not a store owner?{' '}
-              <Link href="/login" className="underline hover:text-primary">
-                Login as a customer
+              {/* This can later link to a contact or support page */}
+              Don't have a store?{' '}
+              <Link href="/" className="underline hover:text-primary">
+                Learn More
               </Link>
             </div>
           </CardFooter>

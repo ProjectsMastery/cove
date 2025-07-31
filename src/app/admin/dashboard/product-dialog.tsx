@@ -150,10 +150,13 @@ export function ProductDialog({ isOpen, onClose, product, categories }: ProductD
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose(false)}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl" 
+        aria-labelledby="product-dialog-title"
+        aria-describedby="product-dialog-description"
+      >
         <DialogHeader>
-          <DialogTitle>{product ? "Edit Product" : "Add New Product"}</DialogTitle>
-          <DialogDescription>
+          <DialogTitle id="product-dialog-title">{product ? "Edit Product" : "Add New Product"}</DialogTitle>
+          <DialogDescription id="product-dialog-description">
             Fill in the details for the product. Click save when you're done.
           </DialogDescription>
         </DialogHeader>

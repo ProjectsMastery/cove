@@ -87,10 +87,15 @@ export function CategoryDialog({ isOpen, onClose, category }: CategoryDialogProp
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose(false)}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md"
+      aria-labelledby="category-dialog-title"
+        aria-describedby="category-dialog-description"
+      >
         <DialogHeader>
-          <DialogTitle>{category ? "Edit Category" : "Add New Category"}</DialogTitle>
-          <DialogDescription>
+        <DialogTitle id="category-dialog-title">
+            {category ? "Edit Category" : "Add New Category"}
+          </DialogTitle>
+          <DialogDescription id="category-dialog-description">
             {category ? "Make changes to your category here." : "Enter the name for the new category."}
           </DialogDescription>
         </DialogHeader>

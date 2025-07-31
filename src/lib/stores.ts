@@ -9,7 +9,9 @@ import type { Store } from '@/lib/types';
 type CreateStoreState = {
     success: boolean;
     error?: string | null;
-}
+    fieldErrors?: z.ZodFlattenedError<z.infer<typeof storeSchema>>['fieldErrors'];
+};
+  
 
 const storeSchema = z.object({
   storeName: z.string().min(2, "Store name is too short."),
@@ -18,11 +20,19 @@ const storeSchema = z.object({
 /**
  * Fetches all stores owned by the currently authenticated admin/superadmin.
  */
+/**
+ * Fetches all stores owned by the currently authenticated admin/superadmin.
+ */
 export async function getStoresForAdmin(): Promise<{ success: boolean; data?: Store[]; error?: string }> {
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { success: false, error: "Not authenticated." };
+    
+    // 1. Get the current user session
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+        return { success: false, error: "Not authenticated." };
+    }
 
+    // 2. Fetch all stores where the owner_id matches the user's ID
     const { data, error } = await supabase
         .from('stores')
         .select('*')
@@ -32,6 +42,7 @@ export async function getStoresForAdmin(): Promise<{ success: boolean; data?: St
         console.error("Error fetching stores:", error);
         return { success: false, error: error.message };
     }
+    
     return { success: true, data: data as Store[] };
 }
 
@@ -45,7 +56,16 @@ export async function createStore(prevState: CreateStoreState, formData: FormDat
     if (!user) return { success: false, error: "You must be logged in." };
 
     const validatedFields = storeSchema.safeParse({ storeName: formData.get('storeName') });
-    if (!validatedFields.success) return { success: false, error: "Invalid store name." };
+    
+    // VVV THIS IS THE FIX VVV
+    if (!validatedFields.success) {
+        // We now return the detailed, flattened error object from Zod.
+        return { 
+            success: false, 
+            error: "Invalid input. Please check the errors below.", // A more generic top-level error
+            fieldErrors: validatedFields.error.flatten().fieldErrors,
+        };
+    }
     
     const { storeName } = validatedFields.data;
 
