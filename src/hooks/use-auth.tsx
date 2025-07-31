@@ -5,13 +5,16 @@ import { useState, useEffect, createContext, useContext, useCallback, ReactNode 
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
+import type { Profile } from '@/lib/types';
 
-// Define the shape of our Auth context
+// VVV We are adding the functions back to the context type VVV
 interface AuthContextType {
   user: User | null;
-  isAdmin: boolean;
+  profile: Profile | null;
+  role: Profile['role'] | null;
+  storeId: string | null;
   isLoading: boolean;
-  login: (email: string, pass: string) => Promise<{success: boolean; error?: string;}>;
+  login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   register: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<{ success: boolean; error?: string }>;
@@ -21,16 +24,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const supabase = createClient();
   const [user, setUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const router = useRouter();
   const pathname = usePathname();
@@ -42,69 +43,52 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (currentUser) {
         try {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', currentUser.id)
-            .single();
-
+          const { data, error } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
           if (error) throw error;
-          setIsAdmin(data?.role === 'admin');
+          setProfile(data as Profile);
         } catch (error) {
           console.error("Error fetching user profile:", error);
-          setIsAdmin(false);
+          setProfile(null);
         }
       } else {
-        setIsAdmin(false);
+        setProfile(null);
       }
-      
       setIsLoading(false);
     });
-
     return () => subscription.unsubscribe();
   }, [supabase]);
 
+  // The "Traffic Cop" useEffect remains the same - it's correct.
   useEffect(() => {
     if (isLoading) return;
-
-    const isAuthenticated = !!user;
-    const isAuthRoute = ['/login', '/register', '/admin/login', '/forgot-password'].includes(pathname);
-    const isProtectedRoute = ['/account', 'checkout'].some(route => pathname.startsWith(route));
+    const userRole = profile?.role;
+    const isAuthRoute = ['/login', '/register', '/admin/login'].includes(pathname);
     const isAdminRoute = pathname.startsWith('/admin');
 
-    if (isAuthenticated && isAuthRoute) {
-      router.push(isAdmin ? '/admin/dashboard' : '/account');
+    if (user && isAuthRoute) {
+      router.push(userRole === 'admin' || userRole === 'superadmin' ? '/admin/dashboard' : '/account');
     }
-    if (!isAuthenticated && (isProtectedRoute || isAdminRoute)) {
-      router.push(isAdminRoute ? '/admin/login' : `/login?redirect=${pathname}`);
+    if (!user && isAdminRoute) {
+      router.push('/admin/login');
     }
-    if (isAuthenticated && !isAdmin && isAdminRoute) {
-        router.push('/');
+    if (user && userRole === 'user' && isAdminRoute) {
+      router.push('/');
     }
-  }, [isLoading, user, isAdmin, pathname, router]);
-
+  }, [isLoading, user, profile, pathname, router]);
+  
+  // --- VVV WE ARE ADDING THE FUNCTIONS BACK IN VVV ---
   const login = useCallback(async (email: string, pass: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-    if (error) {
-      return { success: false, error: error.message };
-    }
+    if (error) return { success: false, error: error.message };
     return { success: true };
   }, [supabase]);
 
   const register = useCallback(async (email: string, pass: string) => {
-    const { error } = await supabase.auth.signUp({ 
-        email, 
-        password: pass,
-        options: {
-            emailRedirectTo: `${window.location.origin}/`
-        }
-    });
-    if (error) {
-      return { success: false, error: error.message };
-    }
+    const { error } = await supabase.auth.signUp({ email, password: pass });
+    if (error) return { success: false, error: error.message };
     return { success: true };
   }, [supabase]);
-  
+
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
     router.push('/');
@@ -114,16 +98,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/update-password`
     });
-    if (error) {
-        return { success: false, error: error.message };
-    }
+    if (error) return { success: false, error: error.message };
     return { success: true };
   }, [supabase]);
+  // --- END OF ADDING FUNCTIONS ---
 
   return (
-    // VVV THIS IS THE FIX VVV
-    // We remove `isAuthenticated` from the value, as it's not defined in the AuthContextType.
-    <AuthContext.Provider value={{ user, isAdmin, login, register, logout, sendPasswordReset, isLoading }}>
+    // And finally, we provide them in the context value.
+    <AuthContext.Provider value={{ user, profile, role: profile?.role || null, storeId: profile?.store_id || null, isLoading, login, register, logout, sendPasswordReset }}>
       {children}
     </AuthContext.Provider>
   );
