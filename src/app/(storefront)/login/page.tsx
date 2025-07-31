@@ -23,7 +23,8 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    const { success, error } = await login(email, password);
+    const { success, error } = await login(email, password) || {};
+    console.log("Login result:", error);
     
     if (!success) {
       toast.error("Login Failed", {

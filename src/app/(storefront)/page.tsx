@@ -5,12 +5,13 @@ import { ProductSearch } from '@/components/product-search';
 import { ProductList } from '@/components/product-list';
 
 // This is a Server Component. It can and should be async.
-export default async function HomePage({ 
-  searchParams 
-}: { 
-  // The searchParams are passed as props, already parsed by Next.js
-  searchParams?: { q?: string; category?: string; };
-}) {
+export default async function HomePage(
+  props: { 
+    // The searchParams are passed as props, already parsed by Next.js
+    searchParams?: Promise<{ q?: string; category?: string; }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   // --- VVV THIS IS THE FIX VVV ---
   // We can now access the properties directly and safely.
   const searchQuery = searchParams?.q || undefined;
@@ -31,7 +32,7 @@ export default async function HomePage({
   if (!categoriesResult.success) {
     console.error("Home Page - Failed to fetch categories:", categoriesResult.error);
   }
-  
+
   return (
     <div className="container mx-auto px-4 py-8 sm:py-12">
       <section className="text-center mb-12">
