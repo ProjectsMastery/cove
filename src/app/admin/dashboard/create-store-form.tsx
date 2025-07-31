@@ -2,14 +2,20 @@
 "use client";
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { 
+   Card,
+   CardContent,
+   CardDescription,
+   CardFooter, CardHeader, 
+   CardTitle 
+  } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { useActionState } from 'react'; // <-- VVV THE FIX: Import the new hook from 'react'
 import {  useFormStatus } from 'react-dom';
-import { createStoreForAdmin } from '@/lib/stores'; // We will create this action next
+import { createStore } from '@/lib/stores'; // We will create this action next
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -22,7 +28,7 @@ function SubmitButton() {
 }
 
 export function CreateStoreForm() {
-  const [state, formAction] = useActionState(createStoreForAdmin, { success: false, error: null });
+  const [state, formAction] = useActionState(createStore, { success: false, error: null });
 
   if (state.success) {
     toast.success("Store created successfully!", {
