@@ -105,3 +105,48 @@ export const deleteCategory = async (categoryId: string) => {
     if (error) throw new Error("Failed to delete category.");
     revalidatePath('/admin/dashboard');
 };
+
+
+// ===================================================================================
+// STORE-SPECIFIC DATA READING FUNCTIONS
+// ===================================================================================
+
+/**
+ * Fetches all products that belong to a specific store.
+ * @param storeId The UUID of the store.
+ */
+export const getProductsForStore = async (storeId: string): Promise<{ success: true; data: Product[] } | { success: false; error: string }> => {
+  if (!storeId) return { success: false, error: "Store ID is required." };
+  
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('store_id', storeId); // <-- The crucial filter
+
+  if (error) {
+    console.error(`Error fetching products for store ${storeId}:`, error);
+    return { success: false, error: error.message };
+  }
+  return { success: true, data: data as Product[] };
+};
+
+/**
+ * Fetches all categories that belong to a specific store.
+ * @param storeId The UUID of the store.
+ */
+export const getCategoriesForStore = async (storeId: string): Promise<{ success: true; data: Category[] } | { success: false; error: string }> => {
+  if (!storeId) return { success: false, error: "Store ID is required." };
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('store_id', storeId); // <-- The crucial filter
+
+  if (error) {
+    console.error(`Error fetching categories for store ${storeId}:`, error);
+    return { success: false, error: error.message };
+  }
+  return { success: true, data: data as Category[] };
+};
