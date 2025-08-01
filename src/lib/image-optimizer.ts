@@ -4,11 +4,10 @@
 import imageCompression from 'browser-image-compression';
 import { toast } from 'sonner';
 
-// --- Configuration for our image compression ---
 const options = {
-  maxSizeMB: 1,      // We will try to compress the image to be under 1 MB.
-  maxWidthOrHeight: 1920, // Resize the image to a max of 1920px on its longest side.
-  useWebWorker: true,  // Use a web worker to avoid freezing the UI during compression.
+  maxSizeMB: 1,      // Target size
+  maxWidthOrHeight: 1920, // Max dimensions
+  useWebWorker: true,
 };
 
 /**
@@ -17,13 +16,15 @@ const options = {
  * @returns The compressed image file, or null if an error occurs.
  */
 export async function compressImage(file: File): Promise<File | null> {
-  // Check if the file is already small enough.
+  // Check if the file is already small enough to skip compression.
   if (file.size / 1024 / 1024 < options.maxSizeMB) {
-    return file; // If it's already small, no need to compress.
+    return file;
   }
 
   try {
-    toast.info("Optimizing image...", { description: "Your image is being compressed for faster uploads." });
+    toast.info("Optimizing image...", { 
+      description: "Your image is being compressed for faster uploads." 
+    });
     
     const compressedFile = await imageCompression(file, options);
     
@@ -36,12 +37,9 @@ export async function compressImage(file: File): Promise<File | null> {
     return compressedFile;
   } catch (error) {
     console.error("Image compression error:", error);
-    toast.error("Image optimization failed.", { description: "Could not compress the image. Please try a different file." });
+    toast.error("Image optimization failed.", { 
+      description: "Could not process the image. Please try a different file." 
+    });
     return null;
   }
-}                                                                            } catch (error) {
-                                                                                console.error("Image compression error:", error);
-                                                                                    toast.error("Image optimization failed.", { description: "Could not compress the image. Please try a different file." });
-                                                                                        return null;
-                                                                                          }
-                                                                                          }
+} // <-- The stray brace was here. It has been removed.
