@@ -117,7 +117,16 @@ export function ProductDialog({ isOpen, onClose, product,  storeId, categories }
       let finalImageUrls = [...existingImageUrls];
       
       if (newlyAddedFiles.length > 0) {
-        const uploadPromises = newlyAddedFiles.map(file => uploadProductImage(file));
+        const uploadPromises = newlyAddedFiles.map(async (file) => {
+          const formData = new FormData();
+          formData.append('file', file);
+          const result = await uploadProductImage(formData); // Call the server action
+          if (!result.success) {
+            throw new Error(result.error || "An unknown upload error occurred.");
+          }
+          return result.url!; // Add the ! to assert that url is not undefined on success
+        });
+        
         const newUrls = await Promise.all(uploadPromises);
         finalImageUrls = [...finalImageUrls, ...newUrls];
       }
