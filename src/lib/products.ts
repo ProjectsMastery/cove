@@ -63,7 +63,7 @@ export const addProduct = async (productData: Omit<Product, 'id' | 'created_at'>
     return data[0] as Product;
 };
 
-export const updateProduct = async (productId: string, productData: Partial<Omit<Product, 'id' | 'created_at'>>) => {
+export const updateProduct = async (productId: string, productData: Partial<Omit<Product, 'id' | 'created_at'>>, finalData: { imageUrls: string[]; name: string; description: string; price: number; stock: number; categoryId: string; }) => {
     const supabase = createAdminClient();
     const { error } = await supabase.from('products').update(productData).eq('id', productId);
     if (error) throw new Error("Failed to update product.");
@@ -71,7 +71,7 @@ export const updateProduct = async (productId: string, productData: Partial<Omit
     revalidatePath(`/products/${productId}`);
 };
 
-export const deleteProduct = async (productId: string) => {
+export const deleteProduct = async (productId: string, storeId: string) => {
     const supabase = createAdminClient();
     const { error } = await supabase.from('products').delete().eq('id', productId);
     if (error) throw new Error("Failed to delete product.");
@@ -79,7 +79,7 @@ export const deleteProduct = async (productId: string) => {
     revalidatePath('/');
 };
 
-export const addCategory = async (categoryData: Omit<Category, 'id' | 'created_at'>) => {
+export const addCategory = async (storeId: string, categoryData: Omit<Category, 'id' | 'created_at'>) => {
     const supabase = createAdminClient();
     const store_id = await getAdminStoreId();
     const { data, error } = await supabase.from('categories').insert([{ ...categoryData, store_id }]).select();
@@ -95,7 +95,7 @@ export const updateCategory = async (categoryId: string, categoryData: Partial<O
     revalidatePath('/admin/dashboard');
 };
 
-export const deleteCategory = async (categoryId: string) => {
+export const deleteCategory = async (categoryId: string, storeId: string) => {
     const supabase = createAdminClient();
     const { data: products, error: productError } = await supabase.from('products').select('id').eq('categoryId', categoryId).limit(1);
     if (productError) throw new Error("Could not verify category usage.");

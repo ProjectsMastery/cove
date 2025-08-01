@@ -6,33 +6,24 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { Store } from '@/lib/types';
 
+const storeSchema = z.object({
+  storeName: z.string().min(2, "Store name must be at least 2 characters."),
+});
+
+// This is the correct, complete state type
 type CreateStoreState = {
     success: boolean;
     error?: string | null;
-    fieldErrors?: z.ZodFlattenedError<z.infer<typeof storeSchema>>['fieldErrors'];
+    fieldErrors?: z.ZodFlattenedError<z.infer<typeof storeSchema>>['fieldErrors'] | null;
 };
   
-
-const storeSchema = z.object({
-  storeName: z.string().min(2, "Store name is too short."),
-});
-
-/**
- * Fetches all stores owned by the currently authenticated admin/superadmin.
- */
-/**
- * Fetches all stores owned by the currently authenticated admin/superadmin.
- */
 export async function getStoresForAdmin(): Promise<{ success: boolean; data?: Store[]; error?: string }> {
     const supabase = createClient();
-    
-    // 1. Get the current user session
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
         return { success: false, error: "Not authenticated." };
     }
 
-    // 2. Fetch all stores where the owner_id matches the user's ID
     const { data, error } = await supabase
         .from('stores')
         .select('*')
@@ -42,14 +33,9 @@ export async function getStoresForAdmin(): Promise<{ success: boolean; data?: St
         console.error("Error fetching stores:", error);
         return { success: false, error: error.message };
     }
-    
     return { success: true, data: data as Store[] };
 }
 
-/**
- * A Server Action for a logged-in admin to create their own store.
- * Renamed to match the component's expectation.
- */
 export async function createStore(prevState: CreateStoreState, formData: FormData): Promise<CreateStoreState> {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -57,12 +43,10 @@ export async function createStore(prevState: CreateStoreState, formData: FormDat
 
     const validatedFields = storeSchema.safeParse({ storeName: formData.get('storeName') });
     
-    // VVV THIS IS THE FIX VVV
     if (!validatedFields.success) {
-        // We now return the detailed, flattened error object from Zod.
         return { 
             success: false, 
-            error: "Invalid input. Please check the errors below.", // A more generic top-level error
+            error: "Invalid input. Please check the errors below.",
             fieldErrors: validatedFields.error.flatten().fieldErrors,
         };
     }
@@ -80,5 +64,7 @@ export async function createStore(prevState: CreateStoreState, formData: FormDat
     }
     
     revalidatePath('/admin/dashboard');
-    return { success: true };
+    // VVV THIS IS THE FIX VVV
+    // The success case must also return the full state object.
+    return { success: true, error: null, fieldErrors: null };
 }

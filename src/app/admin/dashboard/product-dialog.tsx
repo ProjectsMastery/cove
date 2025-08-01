@@ -35,6 +35,7 @@ interface ProductDialogProps {
   onClose: (wasSaved: boolean) => void;
   product: Product | null;
   categories: Category[];
+  storeId: string; // <-- ADD THIS LINE
 }
 
 // --- VVV THIS IS THE NEW, ROBUST SCHEMA DEFINITION VVV ---
@@ -52,7 +53,7 @@ type ProductFormData = z.infer<typeof formSchema>;
 type ProductFormOutput = z.output<typeof formSchema>;
 
 
-export function ProductDialog({ isOpen, onClose, product, categories }: ProductDialogProps) {
+export function ProductDialog({ isOpen, onClose, product,  storeId, categories }: ProductDialogProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [newlyAddedFiles, setNewlyAddedFiles] = useState<File[]>([]);
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
@@ -110,7 +111,7 @@ export function ProductDialog({ isOpen, onClose, product, categories }: ProductD
     }
   };
 
-  const onSubmit: SubmitHandler<ProductFormData> = async (data) => {
+  const onSubmit: SubmitHandler<ProductFormOutput> = async (data) => {
     setIsSaving(true);
     try {
       let finalImageUrls = [...existingImageUrls];
@@ -128,9 +129,10 @@ export function ProductDialog({ isOpen, onClose, product, categories }: ProductD
       }
 
       const finalData = { ...data, imageUrls: finalImageUrls };
+      const finalDataWithStoreId = { ...finalData, store_id: storeId };
 
       if (product) {
-        await updateProduct(product.id, finalData);
+        await updateProduct(product.id, finalData, finalDataWithStoreId);
         toast.success("Product updated successfully.");
       } else {
         await addProduct(finalData as Omit<Product, 'id' | 'created_at'>);

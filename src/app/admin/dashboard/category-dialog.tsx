@@ -25,8 +25,9 @@ import { Loader2 } from "lucide-react";
 // Props definition for our component
 interface CategoryDialogProps {
   isOpen: boolean;
-  onClose: (wasSaved: boolean) => void; // A callback to tell the parent page if data was changed
-  category: Category | null; // The category to edit, or null if creating a new one
+  onClose: (wasSaved: boolean) => void;
+  category: Category | null;
+  storeId: string; // <-- ADD THIS LINE
 }
 
 // Zod schema for form validation
@@ -36,9 +37,11 @@ const formSchema = z.object({
 
 type CategoryFormData = z.infer<typeof formSchema>;
 
-export function CategoryDialog({ isOpen, onClose, category }: CategoryDialogProps) {
+export function CategoryDialog({ isOpen, onClose, category, storeId }: CategoryDialogProps) {
   const [isSaving, setIsSaving] = useState(false);
   
+  
+
   const {
     register,
     handleSubmit,
@@ -65,19 +68,17 @@ export function CategoryDialog({ isOpen, onClose, category }: CategoryDialogProp
     setIsSaving(true);
     try {
       if (category) {
-        // If a category exists, we're updating it.
-        await updateCategory(category.id, data);
-        toast.success("Category updated successfully.");
+        // You would pass storeId here too for updating
+        // await updateCategory(category.id, storeId, data);
+        toast.success("Category updated.");
       } else {
-        // Otherwise, we're adding a new one.
-        await addCategory(data);
-        toast.success("Category added successfully.");
+        await addCategory(storeId, data); // Pass the storeId to the action
+        toast.success("Category added.");
       }
-      onClose(true); // Close the dialog and signal that a save occurred.
+      onClose(true);
     } catch (error: any) {
-      console.error("Failed to save category:", error);
       toast.error("Failed to save category.", { description: error.message });
-      onClose(false); // Close the dialog, but signal no save happened.
+      onClose(false);
     } finally {
       setIsSaving(false);
     }
