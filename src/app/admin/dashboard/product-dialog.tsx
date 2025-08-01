@@ -27,6 +27,7 @@ import Image from "next/image";
 import { useDropzone } from "react-dropzone";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { uploadProductImage } from "@/lib/upload";
+import { compressImage } from '@/lib/image-optimizer'; // <-- Import our new function
 
 
 
@@ -118,6 +119,12 @@ export function ProductDialog({ isOpen, onClose, product,  storeId, categories }
       
       if (newlyAddedFiles.length > 0) {
         const uploadPromises = newlyAddedFiles.map(async (file) => {
+          const compressedFile = await compressImage(file);
+          if (!compressedFile) {
+            // If compression fails, we stop this upload.
+            throw new Error(`Failed to process image: ${file.name}`);
+          }
+          
           const formData = new FormData();
           formData.append('file', file);
           const result = await uploadProductImage(formData); // Call the server action
