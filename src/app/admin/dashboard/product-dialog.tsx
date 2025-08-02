@@ -28,6 +28,7 @@ import { useDropzone } from "react-dropzone";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { uploadProductImage } from "@/lib/upload";
 import { compressImage } from '@/lib/image-optimizer'; // <-- Import our new function
+import { getSignedUploadUrl } from "@/lib/upload";
 
 
 
@@ -118,20 +119,31 @@ export function ProductDialog({ isOpen, onClose, product,  storeId, categories }
       let finalImageUrls = [...existingImageUrls];
       
       if (newlyAddedFiles.length > 0) {
+        toast.info("Uploading images...", { description: "This may take a moment." });
+
+        // VVV THIS IS THE NEW DIRECT UPLOAD LOGIC VVV
         const uploadPromises = newlyAddedFiles.map(async (file) => {
-          const compressedFile = await compressImage(file);
-          if (!compressedFile) {
-            // If compression fails, we stop this upload.
-            throw new Error(`Failed to process image: ${file.name}`);
+          // 1. Ask our server for a secure place to upload.
+          const urlResult = await getSignedUploadUrl(file.name);
+          if (!urlResult.success) {
+            throw new Error(urlResult.error || "Could not get an upload URL.");
           }
-          
-          const formData = new FormData();
-          formData.append('file', file);
-          const result = await uploadProductImage(formData); // Call the server action
-          if (!result.success) {
-            throw new Error(result.error || "An unknown upload error occurred.");
+
+          // 2. Upload the file DIRECTLY to Supabase Storage using the secure URL.
+          const { error: uploadError } = await createClient() // Use the normal client
+            .storage
+            .from('product-images')
+            .uploadToSignedUrl(urlResult.path!, urlResult.token!, file, {
+                upsert: false // Don't overwrite existing files
+            });
+
+          if (uploadError) {
+            throw new Error(uploadError.message || `Upload failed for ${file.name}.`);
           }
-          return result.url!; // Add the ! to assert that url is not undefined on success
+
+          // 3. Get the final public URL of the uploaded file.
+          const { data: { publicUrl } } = createClient().storage.from('product-images').getPublicUrl(urlResult.path!);
+          return publicUrl;
         });
         
         const newUrls = await Promise.all(uploadPromises);
@@ -145,13 +157,12 @@ export function ProductDialog({ isOpen, onClose, product,  storeId, categories }
       }
 
       const finalData = { ...data, imageUrls: finalImageUrls };
-      const finalDataWithStoreId = { ...finalData, store_id: storeId };
 
       if (product) {
-        await updateProduct(product.id, finalData, finalDataWithStoreId);
+        await updateProduct(product.id, storeId, finalData);
         toast.success("Product updated successfully.");
       } else {
-        await addProduct(finalData as Omit<Product, 'id' | 'created_at'>);
+        await addProduct(storeId, finalData as Omit<Product, 'id' | 'created_at' | 'store_id'>);
         toast.success("Product added successfully.");
       }
       onClose(true);
@@ -163,6 +174,7 @@ export function ProductDialog({ isOpen, onClose, product,  storeId, categories }
       setIsSaving(false);
     }
   };
+  
   
   if (!isOpen) return null;
 
