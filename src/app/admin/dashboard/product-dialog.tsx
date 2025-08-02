@@ -26,7 +26,6 @@ import { Loader2, Upload, X } from "lucide-react";
 import Image from "next/image";
 import { useDropzone } from "react-dropzone";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { uploadProductImage } from "@/lib/upload";
 import { compressImage } from '@/lib/image-optimizer'; // <-- Import our new function
 import { getSignedUploadUrl } from "@/lib/upload";
 
