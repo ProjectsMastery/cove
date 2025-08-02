@@ -1,4 +1,3 @@
-// src/app/admin/dashboard/product-dialog.tsx
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -13,7 +12,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,9 +24,9 @@ import { Loader2, Upload, X } from "lucide-react";
 import Image from "next/image";
 import { useDropzone } from "react-dropzone";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { compressImage } from '@/lib/image-optimizer'; // <-- Import our new function
+// VVV Import the new server action and the client-side Supabase creator VVV
 import { getSignedUploadUrl } from "@/lib/upload";
-
+import { createClient } from "@/lib/supabase/client";
 
 
 interface ProductDialogProps {
@@ -36,25 +34,20 @@ interface ProductDialogProps {
   onClose: (wasSaved: boolean) => void;
   product: Product | null;
   categories: Category[];
-  storeId: string; // <-- ADD THIS LINE
+  storeId: string;
 }
 
-// --- VVV THIS IS THE NEW, ROBUST SCHEMA DEFINITION VVV ---
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   description: z.string().min(10, "Description must be at least 10 characters."),
-  // The INPUT can be a string or a number, but the OUTPUT will be a number.
   price: z.coerce.number().positive("Price must be a positive number."),
   stock: z.coerce.number().int().min(0, "Stock cannot be negative."),
   categoryId: z.string().min(1, "Please select a category."),
 });
 
-// We explicitly define the OUTPUT type from the schema.
-type ProductFormData = z.infer<typeof formSchema>;
 type ProductFormOutput = z.output<typeof formSchema>;
 
-
-export function ProductDialog({ isOpen, onClose, product,  storeId, categories }: ProductDialogProps) {
+export function ProductDialog({ isOpen, onClose, product, categories, storeId }: ProductDialogProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [newlyAddedFiles, setNewlyAddedFiles] = useState<File[]>([]);
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
@@ -66,9 +59,8 @@ export function ProductDialog({ isOpen, onClose, product,  storeId, categories }
     setValue,
     watch,
     formState: { errors },
-  } = useForm<ProductFormOutput>({ // We still use the OUTPUT type here
-    // But the resolver now understands the coercion and won't throw an error.
-    resolver: zodResolver(formSchema) as Resolver<ProductFormOutput, any, ProductFormOutput>, 
+  } = useForm<ProductFormOutput>({
+    resolver: zodResolver(formSchema) as Resolver<ProductFormOutput>, 
     defaultValues: {
       name: "",
       description: "",
@@ -85,8 +77,7 @@ export function ProductDialog({ isOpen, onClose, product,  storeId, categories }
   useEffect(() => {
     if (isOpen) {
       if (product) {
-        // The reset object is now clean and correct.
-        const formValues: ProductFormData = {
+        const formValues = {
           name: product.name,
           description: product.description,
           price: product.price,
@@ -112,6 +103,7 @@ export function ProductDialog({ isOpen, onClose, product,  storeId, categories }
     }
   };
 
+  // --- VVV THIS IS THE NEW "SIGNED URL" SUBMISSION LOGIC VVV ---
   const onSubmit: SubmitHandler<ProductFormOutput> = async (data) => {
     setIsSaving(true);
     try {
@@ -120,28 +112,26 @@ export function ProductDialog({ isOpen, onClose, product,  storeId, categories }
       if (newlyAddedFiles.length > 0) {
         toast.info("Uploading images...", { description: "This may take a moment." });
 
-        // VVV THIS IS THE NEW DIRECT UPLOAD LOGIC VVV
         const uploadPromises = newlyAddedFiles.map(async (file) => {
           // 1. Ask our server for a secure place to upload.
           const urlResult = await getSignedUploadUrl(file.name);
-          if (!urlResult.success) {
+          if (!urlResult.success || !urlResult.path || !urlResult.token) {
             throw new Error(urlResult.error || "Could not get an upload URL.");
           }
 
           // 2. Upload the file DIRECTLY to Supabase Storage using the secure URL.
-          const { error: uploadError } = await createClient() // Use the normal client
+          const supabase = createClient();
+          const { error: uploadError } = await supabase
             .storage
             .from('product-images')
-            .uploadToSignedUrl(urlResult.path!, urlResult.token!, file, {
-                upsert: false // Don't overwrite existing files
-            });
+            .uploadToSignedUrl(urlResult.path, urlResult.token, file);
 
           if (uploadError) {
             throw new Error(uploadError.message || `Upload failed for ${file.name}.`);
           }
 
           // 3. Get the final public URL of the uploaded file.
-          const { data: { publicUrl } } = createClient().storage.from('product-images').getPublicUrl(urlResult.path!);
+          const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(urlResult.path);
           return publicUrl;
         });
         
@@ -174,24 +164,20 @@ export function ProductDialog({ isOpen, onClose, product,  storeId, categories }
     }
   };
   
-  
   if (!isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose(false)}>
-      <DialogContent className="sm:max-w-2xl" 
-        aria-labelledby="product-dialog-title"
-        aria-describedby="product-dialog-description"
-      >
+      <DialogContent className="sm:max-w-2xl" aria-labelledby="product-dialog-title">
         <DialogHeader>
           <DialogTitle id="product-dialog-title">{product ? "Edit Product" : "Add New Product"}</DialogTitle>
-          <DialogDescription id="product-dialog-description">
+          <DialogDescription>
             Fill in the details for the product. Click save when you're done.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[80vh] pr-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4">
-            {/* The rest of your JSX form remains exactly the same */}
+            {/* ... The rest of your form's JSX is correct and does not need to change ... */}
             <div>
               <Label>Images</Label>
               <div {...getRootProps()} className={`mt-2 flex justify-center items-center w-full h-32 px-6 border-2 border-dashed rounded-lg cursor-pointer ${isDragActive ? 'border-primary bg-primary/10' : 'border-input'}`}>
@@ -269,4 +255,4 @@ export function ProductDialog({ isOpen, onClose, product,  storeId, categories }
       </DialogContent>
     </Dialog>
   );
-}
+            }
