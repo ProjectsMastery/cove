@@ -2,9 +2,10 @@
 
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { Loader2, PlusCircle, Edit, Trash2, AlertTriangle } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
-import { getProductsForStore, getCategoriesForStore, deleteCategory, deleteProduct } from '@/lib/products';
+import { getProductsForStore, getCategoriesForStore, deleteCategory, deleteProduct, deleteStore } from '@/lib/products';
+import { useRouter } from 'next/navigation'; // <-- Import useRouter
 import type { Product, Category } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -36,6 +37,7 @@ export default function StoreDashboardPage() {
   const { role, isLoading: isAuthLoading } = useAuth();
   const params = useParams();
   const storeId = params.storeId as string;
+  const router = useRouter();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -105,6 +107,20 @@ export default function StoreDashboardPage() {
     );
   }
 
+  const handleDeleteStore = async () => {
+    if (!storeId) return;
+
+    const result = await deleteStore(storeId);
+    if (result.success) {
+      toast.success("Store deleted successfully.");
+      // On success, redirect the user back to the main admin dashboard.
+      router.push('/admin/dashboard');
+    } else {
+      toast.error("Failed to delete store.", { description: result.error });
+    }
+  };
+
+
   return (
     <>
       <div className="space-y-8 p-8"> {/* <-- Added p-8 as you requested! */}
@@ -117,16 +133,16 @@ export default function StoreDashboardPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-             <Card>
+            <Card>
               <CardHeader className="flex flex-row justify-between items-center">
-                  <div>
-                      <CardTitle>Products</CardTitle>
-                      <CardDescription>Manage your product catalog.</CardDescription>
-                  </div>
-                  <Button onClick={handleAddProductClick}>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Add Product
-                  </Button>
+                <div>
+                  <CardTitle>Products</CardTitle>
+                  <CardDescription>Manage your product catalog.</CardDescription>
+                </div>
+                <Button onClick={handleAddProductClick} className='cursor-pointer'>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Product
+                </Button>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -147,15 +163,15 @@ export default function StoreDashboardPage() {
                         <TableCell>{getCategoryName(product.categoryId)}</TableCell>
                         <TableCell>{product.stock}</TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => handleEditProductClick(product)}><Edit className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleEditProductClick(product)} className="cursor-pointer"><Edit className="h-4 w-4 cur" /></Button>
                           <AlertDialog>
-                            <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                            <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive hover:text-destructive cursor-pointer"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                             <AlertDialogContent>
-                                <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle></AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteProduct(product.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                                </AlertDialogFooter>
+                              <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle></AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel className='cursor-pointer'>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteProduct(product.id)} className="bg-destructive hover:bg-destructive/90 cursor-pointer">Delete</AlertDialogAction>
+                              </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
                         </TableCell>
@@ -169,8 +185,8 @@ export default function StoreDashboardPage() {
           <div>
             <Card>
               <CardHeader className="flex flex-row justify-between items-center">
-                  <div><CardTitle>Categories</CardTitle></div>
-                  <Button size="sm" onClick={handleAddCategoryClick}><PlusCircle className="mr-2 h-4 w-4" />Add</Button>
+                <div><CardTitle>Categories</CardTitle></div>
+                <Button size="sm" onClick={handleAddCategoryClick} className='cursor-pointer'><PlusCircle className="mr-2 h-4 w-4" />Add</Button>
               </CardHeader>
               <CardContent>
                 {isLoadingData ? (
@@ -178,18 +194,18 @@ export default function StoreDashboardPage() {
                 ) : categories.map(category => (
                   <div key={category.id} className="flex justify-between items-center p-2 group">
                     <span>{category.name}</span>
-                    <div className="flex opacity-0 group-hover:opacity-100">
-                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditCategoryClick(category)}><Edit className="h-4 w-4" /></Button>
-                       <AlertDialog>
-                          <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle></AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteCategory(category.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                       </AlertDialog>
+                    <div className="flex transition-opacity">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 cursor-pointer" onClick={() => handleEditCategoryClick(category)}><Edit className="h-4 w-4 cursor-pointer" /></Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive cursor-pointer"><Trash2 className="h-4 w-4 cursor-pointer" /></Button></AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle></AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDeleteCategory(category.id)} className="bg-destructive hover:bg-destructive/90 cursor-pointer">Delete</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 ))}
@@ -197,6 +213,42 @@ export default function StoreDashboardPage() {
             </Card>
           </div>
         </div>
+        <Card className="border-destructive">
+          <CardHeader>
+              <CardTitle className="text-destructive">Danger Zone</CardTitle>
+              <CardDescription>Actions taken here are permanent and cannot be undone.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-lg border border-destructive/20 p-4">
+                  <div>
+                      <h3 className="font-semibold">Delete This Store</h3>
+                      <p className="text-sm text-muted-foreground">This will permanently remove this store and all its products and categories.</p>
+                  </div>
+                  <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                          <Button variant="destructive" className="mt-4 sm:mt-0 cursor-pointer">
+                              <AlertTriangle className="mr-2 h-4 w-4" />
+                              Delete Store
+                          </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                          <AlertDialogHeader>
+                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action is permanent. All products and categories within this store will be lost forever.
+                              </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleDeleteStore} className="bg-destructive hover:bg-destructive/90">
+                                  Yes, Delete This Store
+                              </AlertDialogAction>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
+                  </AlertDialog>
+              </div>
+          </CardContent>
+        </Card>
       </div>
 
       <ProductDialog isOpen={isProductDialogOpen} onClose={handleProductDialogClose} product={selectedProduct} categories={categories} storeId={storeId} />

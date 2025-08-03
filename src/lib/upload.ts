@@ -33,7 +33,7 @@ export const getSignedUploadUrl = async (fileName: string): Promise<{ success: b
   const { data, error } = await supabaseAdmin
     .storage
     .from('product-images')
-    .createSignedUploadUrl(filePath, 60); // URL is valid for 60 seconds
+    .createSignedUploadUrl(filePath); // URL is valid for 60 seconds
 
   if (error) {
     console.error("Error creating signed upload URL:", error);

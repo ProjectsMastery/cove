@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import type { Profile } from '@/lib/types';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
@@ -54,23 +55,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, [supabase]);
 
-  // The new, simplified "Traffic Cop"
+
+  // The "Traffic Cop" useEffect for handling all redirects.
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading) return; // Don't do anything until the initial auth check is complete.
 
     const isAuthenticated = !!user;
     const userRole = profile?.role;
+    
+    // VVV THIS IS THE FIX VVV
+    // We now define all our route types explicitly.
+    const isPublicAuthRoute = ['/admin/login'].includes(pathname); // Pages for logged-out users
     const isAdminRoute = pathname.startsWith('/admin');
-    const isAuthRoute = pathname === '/admin/login' || pathname === '/admin-signup';
+    const isSuperAdminOnlyRoute = pathname === '/admin-signup';
 
-    // Case 1: User is logged in but on the login page. Redirect to dashboard.
-    if (isAuthenticated && isAuthRoute) {
+    // Case 1: User is LOGGED IN but on a public-only auth page (like /admin/login).
+    // Send them to their dashboard.
+    if (isAuthenticated && isPublicAuthRoute) {
       router.push('/admin/dashboard');
+      return; // Stop further checks
     }
 
-    // Case 2: User is logged out but trying to access a protected admin page.
-    if (!isAuthenticated && isAdminRoute && !isAuthRoute) {
+    // Case 2: User is LOGGED OUT but trying to access a protected admin page.
+    if (!isAuthenticated && isAdminRoute && !isPublicAuthRoute) {
       router.push('/admin/login');
+      return;
+    }
+    
+    // Case 3: A regular 'admin' is trying to access a route meant only for 'superadmin'.
+    if (isAuthenticated && userRole === 'admin' && isSuperAdminOnlyRoute) {
+        toast.error("Access Denied", { description: "You do not have permission to create new admins." });
+        router.push('/admin/dashboard');
+        return;
     }
 
   }, [isLoading, user, profile, pathname, router]);

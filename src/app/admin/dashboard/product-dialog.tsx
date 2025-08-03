@@ -244,9 +244,9 @@ export function ProductDialog({ isOpen, onClose, product, categories, storeId }:
 
             <DialogFooter className="pt-4 !mt-8">
               <DialogClose asChild>
-                <Button type="button" variant="outline" disabled={isSaving}>Cancel</Button>
+                <Button type="button" variant="outline" disabled={isSaving} className="cursor-pointer">Cancel</Button>
               </DialogClose>
-              <Button type="submit" disabled={isSaving}>
+              <Button type="submit" disabled={isSaving} className="cursor-pointer">
                   {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save changes
               </Button>
