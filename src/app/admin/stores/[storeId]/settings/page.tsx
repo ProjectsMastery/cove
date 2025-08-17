@@ -3,7 +3,7 @@
 
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { Loader2, ArrowLeft, AlertTriangle, Palette } from 'lucide-react';
 import { deleteStore } from '@/lib/products';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -57,6 +57,27 @@ export default function StoreSettingsPage() {
 
       {/* We can add other settings cards here in the future, like for custom domains */}
 
+      <Card>
+          <CardHeader>
+              <CardTitle>Theme Customization</CardTitle>
+              <CardDescription>Change your store's colors, fonts, and layout to match your brand.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div>
+                      <h3 className="font-semibold">Customize Your Storefront</h3>
+                      <p className="text-sm text-muted-foreground">Open the theme editor to get started.</p>
+                  </div>
+                   <Link href={`/admin/stores/${storeId}/customize`}>
+                        <Button variant="outline" className="text-white cursor-pointer">
+                            <Palette className="mr-2 h-4 w-4" />
+                            Open Customizer
+                        </Button>
+                   </Link>
+              </div>
+          </CardContent>
+      </Card>
+
       <Card className="border-destructive">
         <CardHeader>
             <CardTitle className="text-destructive">Danger Zone</CardTitle>
@@ -70,7 +91,7 @@ export default function StoreSettingsPage() {
                 </div>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="destructive"><AlertTriangle className="mr-2 h-4 w-4" />Delete Store</Button>
+                        <Button variant="destructive" className="text-white cursor-pointer"><AlertTriangle className="mr-2 h-4 w-4" />Delete Store</Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                         <AlertDialogHeader>

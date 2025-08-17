@@ -1,8 +1,7 @@
-// src/app/admin/dashboard/category-dialog.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useForm, SubmitHandler, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -27,7 +26,7 @@ interface CategoryDialogProps {
   isOpen: boolean;
   onClose: (wasSaved: boolean) => void;
   category: Category | null;
-  storeId: string; // <-- ADD THIS LINE
+  storeId: string;
 }
 
 // Zod schema for form validation
@@ -40,8 +39,6 @@ type CategoryFormData = z.infer<typeof formSchema>;
 export function CategoryDialog({ isOpen, onClose, category, storeId }: CategoryDialogProps) {
   const [isSaving, setIsSaving] = useState(false);
   
-  
-
   const {
     register,
     handleSubmit,
@@ -51,8 +48,6 @@ export function CategoryDialog({ isOpen, onClose, category, storeId }: CategoryD
     resolver: zodResolver(formSchema),
   });
 
-  // This effect runs when the dialog opens. It populates the form
-  // with the category's data if we are editing, or resets it if we are adding.
   useEffect(() => {
     if (isOpen) {
       if (category) {
@@ -63,20 +58,25 @@ export function CategoryDialog({ isOpen, onClose, category, storeId }: CategoryD
     }
   }, [isOpen, category, reset]);
 
-  // This function is called on form submission
   const onSubmit: SubmitHandler<CategoryFormData> = async (data) => {
+    if (!storeId) {
+        toast.error("An error occurred", { description: "Store ID is missing." });
+        return;
+    }
     setIsSaving(true);
     try {
       if (category) {
-        // You would pass storeId here too for updating
-        // await updateCategory(category.id, storeId, data);
-        toast.success("Category updated.");
+        // We are editing an existing category
+        await updateCategory(category.id, storeId, data);
+        toast.success("Category updated successfully.");
       } else {
-        await addCategory(storeId, data); // Pass the storeId to the action
-        toast.success("Category added.");
+        // We are adding a new category
+        await addCategory(storeId, data);
+        toast.success("Category added successfully.");
       }
-      onClose(true);
+      onClose(true); // Close dialog and signal that a save occurred
     } catch (error: any) {
+      console.error("Failed to save category:", error);
       toast.error("Failed to save category.", { description: error.message });
       onClose(false);
     } finally {
@@ -88,30 +88,25 @@ export function CategoryDialog({ isOpen, onClose, category, storeId }: CategoryD
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose(false)}>
-      <DialogContent className="sm:max-w-md"
-      aria-labelledby="category-dialog-title"
-        aria-describedby="category-dialog-description"
-      >
+      <DialogContent className="sm:max-w-md" aria-labelledby="category-dialog-title">
         <DialogHeader>
-        <DialogTitle id="category-dialog-title">
-            {category ? "Edit Category" : "Add New Category"}
-          </DialogTitle>
-          <DialogDescription id="category-dialog-description">
+          <DialogTitle id="category-dialog-title">{category ? "Edit Category" : "Add New Category"}</DialogTitle>
+          <DialogDescription>
             {category ? "Make changes to your category here." : "Enter the name for the new category."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4">
           <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">Category Name</Label>
               <Input id="name" {...register("name")} />
               {errors.name && <p className="text-destructive text-sm mt-1">{errors.name.message}</p>}
           </div>
 
           <DialogFooter className="pt-4">
             <DialogClose asChild>
-              <Button type="button" variant="outline" disabled={isSaving}>Cancel</Button>
+              <Button type="button" variant="outline" className="cursor-pointer" disabled={isSaving}>Cancel</Button>
             </DialogClose>
-            <Button type="submit" disabled={isSaving}>
+            <Button type="submit" className="cursor-pointer" disabled={isSaving}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save
             </Button>

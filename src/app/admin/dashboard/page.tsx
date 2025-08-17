@@ -75,7 +75,7 @@ export default function AdminDashboardPage() {
               <CardTitle>Your Stores</CardTitle>
               <CardDescription>Select a store to manage or create a new one.</CardDescription>
             </div>
-            <Button onClick={() => setIsCreateStoreOpen(true)}>
+            <Button onClick={() => setIsCreateStoreOpen(true)} className="text-white cursor-pointer">
               <PlusCircle className="mr-2 h-4 w-4" />
               Create New Store
             </Button>

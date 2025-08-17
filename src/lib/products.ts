@@ -46,15 +46,28 @@ export const getCategories = async (): Promise<GetCategoriesResult> => {
 // STORE-SPECIFIC DATA READING FUNCTIONS (FOR ADMINS)
 // ===================================================================================
 
-export const getProductsForStore = async (storeId: string): Promise<GetProductsResult> => {
+export const getProductsForStore = async (
+  storeId: string,
+  filters: { searchQuery?: string; categoryId?: string } = {} // <-- Add filters parameter
+): Promise<{ success: true; data: Product[] } | { success: false; error: string }> => {
   if (!storeId) return { success: false, error: "Store ID is required." };
   
-  // Reading data within the admin panel can use the user's context.
-  const supabase = createClient();
-  const { data, error } = await supabase
+  const supabase = createClient(); // Use the standard client for public storefront
+  
+  let query = supabase
     .from('products')
     .select('*')
     .eq('store_id', storeId);
+
+  // VVV APPLY THE FILTERS VVV
+  if (filters.categoryId) {
+    query = query.eq('categoryId', filters.categoryId);
+  }
+  if (filters.searchQuery) {
+    query = query.ilike('name', `%${filters.searchQuery}%`);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error(`Error fetching products for store ${storeId}:`, error);

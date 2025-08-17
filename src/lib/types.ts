@@ -59,3 +59,45 @@ export type Product = {
     role: 'user' | 'admin' | 'superadmin';
     store_id: string | null; // Add store_id to the type
   };
+
+
+// This is the new, complete type for our theme settings.
+// It matches the columns we added to the database.
+export type ThemeSettings = {
+  id: string; // uuid
+  store_id: string; // uuid
+  updated_at: string; // timestamptz
+
+  // --- Published (Live) Settings ---
+  published_settings: {
+    primaryColor?: string;
+    fontFamily?: string;
+  };
+  published_logo_url: string | null;
+  published_header_bg_color: string | null;
+  published_footer_bg_color: string | null;
+  published_background: {
+    type: 'color' | 'gradient' | 'image';
+    value: string; // For color hex or image URL
+    from?: string; // For gradient
+    to?: string; // For gradient
+    angle?: string; // For gradient
+  } | null;
+
+  // --- Draft (Work-in-Progress) Settings ---
+  draft_settings: {
+    draft_settings: any;
+    primaryColor?: string;
+    fontFamily?: string;
+  };
+  draft_logo_url: string | null;
+  draft_header_bg_color: string | null;
+  draft_footer_bg_color: string | null;
+  draft_background: {
+    type: 'color' | 'gradient' | 'image';
+    value: string;
+    from?: string;
+    to?: string;
+    angle?: string;
+  } | null;
+};
