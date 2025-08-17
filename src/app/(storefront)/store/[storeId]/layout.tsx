@@ -56,7 +56,7 @@ export default async function StorefrontLayout({
 
   return (
     // This is now a simple div, NOT an html document. This is the fix.
-    <div style={themeStyles}>
+    <div style={themeStyles} className='bg-dark-bg flex flex-col min-h-screen'>
         {/* We apply the background to a self-contained wrapper */}
         <div style={backgroundStyle} className="min-h-screen">
             <StorefrontHeader storeName={store.name} theme={theme} />

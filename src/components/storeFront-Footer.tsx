@@ -10,10 +10,15 @@ interface StorefrontFooterProps {
 }
 
 export function StorefrontFooter({ storeName, theme }: StorefrontFooterProps) {
+  const bgColor = theme.footerBgColor || '#121212';
+
   return (
-    <footer style={{ backgroundColor: theme.footerBgColor || '#F9FAFB' }} className="border-t">
-      <div className="container mx-auto py-6 text-center text-muted-foreground">
-        <p className="text-sm">
+    <footer
+      style={{ backgroundColor: bgColor }}
+      className="border-t border-[#2c2c2c] text-white shadow-[0_-2px_10px_rgba(0,0,0,0.4)]"
+    >
+      <div className="container mx-auto py-6 text-center">
+        <p className="text-sm text-gray-400">
           © {new Date().getFullYear()} {storeName}. All rights reserved.
         </p>
       </div>
